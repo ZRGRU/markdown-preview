@@ -1,3 +1,11 @@
+// Configura o marked para usar o highlight.js
+marked.setOptions({
+  highlight: function(code, lang) {
+    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+    return hljs.highlight(code, { language }).value;
+  }
+});
+
 // Pega as referências dos elementos HTML
 const editor = document.getElementById('editor');
 const preview = document.getElementById('preview');
@@ -39,3 +47,28 @@ function hello() {
 
 // Chama a função uma vez no início para renderizar o texto inicial
 updatePreview();
+
+// Função para salvar no localStorage
+function saveContent() {
+    localStorage.setItem('markdownContent', editor.value);
+}
+
+// Função para carregar do localStorage
+function loadContent() {
+    const savedContent = localStorage.getItem('markdownContent');
+    if (savedContent) {
+        editor.value = savedContent;
+    }
+}
+
+// Modifique o event listener para salvar a cada alteração
+editor.addEventListener('input', () => {
+    updatePreview();
+    saveContent();
+});
+
+// Ao carregar a página, carregue o conteúdo salvo e atualize o preview
+window.addEventListener('load', () => {
+    loadContent();
+    updatePreview();
+});

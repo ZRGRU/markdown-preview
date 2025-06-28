@@ -1,0 +1,24 @@
+{
+  "name": "markdown-preview",
+  "version": "1.0.0",
+  "description": "",
+  "main": "script.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ZRGRU/markdown-preview.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/ZRGRU/markdown-preview/issues"
+  },
+  "homepage": "https://github.com/ZRGRU/markdown-preview#readme",
+  "devDependencies": {
+    "electron": "^37.1.0"
+  }
+}
