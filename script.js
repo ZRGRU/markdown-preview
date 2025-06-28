@@ -1,3 +1,13 @@
+// script.js - VERSÃO PARA ELECTRON
+
+// 1. Importando módulos locais e IPC do Electron
+const { ipcRenderer } = require('electron');
+const marked = require('marked');
+const hljs = require('highlight.js');
+
+const editor = document.getElementById('editor');
+const preview = document.getElementById('preview');
+
 // Configura o marked para usar o highlight.js
 marked.setOptions({
   highlight: function(code, lang) {
@@ -6,69 +16,27 @@ marked.setOptions({
   }
 });
 
-// Pega as referências dos elementos HTML
-const editor = document.getElementById('editor');
-const preview = document.getElementById('preview');
-
-// Função para atualizar o preview
 function updatePreview() {
-    // 1. Pega o texto do editor
-    const markdownText = editor.value;
-    
-    // 2. Converte o texto para HTML usando a biblioteca marked()
-    const htmlText = marked.parse(markdownText);
-    
-    // 3. Coloca o HTML gerado dentro da div de preview
-    preview.innerHTML = htmlText;
+  const htmlText = marked.parse(editor.value);
+  preview.innerHTML = htmlText;
 }
 
-// Adiciona um "escutador de eventos" no editor.
-// O evento 'input' é acionado toda vez que o usuário digita algo.
 editor.addEventListener('input', updatePreview);
 
-// Adiciona um texto inicial para demonstração
-editor.value = `# Olá, Mundo!
+// 2. Ouvindo o pedido do processo principal
+ipcRenderer.on('get-content', () => {
+  // 3. Enviando o conteúdo de volta para o processo principal
+  ipcRenderer.send('send-content', editor.value);
+});
 
-Este é um preview de **Markdown** em tempo real.
 
-## Recursos
+// Texto inicial de exemplo
+editor.value = `# App de Desktop!
 
-- Listas
-- *Itálico* e **Negrito**
-- \`código inline\`
+Agora você pode usar **Cmd/Ctrl + S** para salvar seu trabalho.
 
-\`\`\`javascript
-// Bloco de código
-function hello() {
-  console.log("Bem-vindo!");
-}
-\`\`\`
+- Criado com Electron.js
+- Renderizado com marked.js
+- Realce de sintaxe com highlight.js
 `;
-
-// Chama a função uma vez no início para renderizar o texto inicial
 updatePreview();
-
-// Função para salvar no localStorage
-function saveContent() {
-    localStorage.setItem('markdownContent', editor.value);
-}
-
-// Função para carregar do localStorage
-function loadContent() {
-    const savedContent = localStorage.getItem('markdownContent');
-    if (savedContent) {
-        editor.value = savedContent;
-    }
-}
-
-// Modifique o event listener para salvar a cada alteração
-editor.addEventListener('input', () => {
-    updatePreview();
-    saveContent();
-});
-
-// Ao carregar a página, carregue o conteúdo salvo e atualize o preview
-window.addEventListener('load', () => {
-    loadContent();
-    updatePreview();
-});

@@ -1,42 +1,69 @@
-// main.js - Processo Principal do Electron
+// main.js - VERSÃO COMPLETA
 
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, Menu, dialog, ipcMain } = require('electron');
 const path = require('path');
+const fs = require('fs'); // Módulo 'fs' do Node.js para lidar com arquivos
 
-// Função que cria a janela do navegador
+let mainWindow; // Torna a variável da janela global para acessá-la mais tarde
+
 function createWindow() {
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     webPreferences: {
-    //   __dirname aponta para a raiz do projeto
-    //   path.join é usado para criar um caminho de arquivo seguro entre SOs
-    //   preload: path.join(__dirname, 'preload.js') // Opcional, mas boa prática
+      // IMPORTANTE: Necessário para usar 'require' no script.js
+      nodeIntegration: true,
+      contextIsolation: false,
     }
   });
 
-  // Carrega o index.html na janela
   mainWindow.loadFile('index.html');
-
-  // Abre as Ferramentas de Desenvolvedor (DevTools) - opcional
-  // mainWindow.webContents.openDevTools();
 }
 
-// Este método será chamado quando o Electron terminar a inicialização
-// e estiver pronto para criar janelas do navegador.
-app.whenReady().then(() => {
-  createWindow();
+// --- LÓGICA DO MENU ---
+const menuTemplate = [
+  {
+    label: 'Arquivo',
+    submenu: [
+      {
+        label: 'Salvar Arquivo...',
+        accelerator: 'CmdOrCtrl+S',
+        click() {
+          // 1. Pede ao renderer (janela) o conteúdo atual
+          mainWindow.webContents.send('get-content');
+        }
+      },
+      {
+        label: 'Sair',
+        role: 'quit'
+      }
+    ]
+  }
+];
 
-  app.on('activate', function () {
-    // No macOS, é comum recriar uma janela no aplicativo quando o
-    // ícone do dock é clicado e não há outras janelas abertas.
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+// --- LÓGICA DE IPC (COMUNICAÇÃO) ---
+
+// 2. O renderer envia o conteúdo, agora abrimos a caixa de diálogo para salvar
+ipcMain.on('send-content', (event, content) => {
+  dialog.showSaveDialog(mainWindow, {
+    title: 'Salvar arquivo Markdown',
+    filters: [{ name: 'Markdown Files', extensions: ['md'] }]
+  }).then(result => {
+    if (!result.canceled && result.filePath) {
+      fs.writeFileSync(result.filePath, content);
+    }
+  }).catch(err => {
+    console.log(err);
   });
 });
 
-// Encerra o aplicativo quando todas as janelas forem fechadas, exceto no macOS.
-app.on('window-all-closed', function () {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+app.whenReady().then(() => {
+  createWindow();
+  const menu = Menu.buildFromTemplate(menuTemplate);
+  Menu.setApplicationMenu(menu);
+  // ... resto do código app.on('activate') ...
+});
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') app.quit();
 });
