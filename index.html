@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown Preview</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container">
+        <div class="panel">
+            <h2 class="panel-title">Markdown</h2>
+            <textarea id="editor" spellcheck="false"></textarea>
+        </div>
+        <div class="panel">
+            <h2 class="panel-title">Preview</h2>
+            <div id="preview"></div>
+        </div>
+    </div>
+
+    <!-- Incluindo a biblioteca marked.js via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <!-- Nosso script personalizado -->
+    <script src="script.js"></script>
+
+</body>
+</html>
