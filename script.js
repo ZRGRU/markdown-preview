@@ -1,6 +1,5 @@
-// script.js - VERSÃO PARA ELECTRON
+// script.js - VERSÃO ATUALIZADA
 
-// 1. Importando módulos locais e IPC do Electron
 const { ipcRenderer } = require('electron');
 const marked = require('marked');
 const hljs = require('highlight.js');
@@ -8,7 +7,9 @@ const hljs = require('highlight.js');
 const editor = document.getElementById('editor');
 const preview = document.getElementById('preview');
 
-// Configura o marked para usar o highlight.js
+// Variável para rastrear se o documento foi editado
+let isDocumentEdited = false;
+
 marked.setOptions({
   highlight: function(code, lang) {
     const language = hljs.getLanguage(lang) ? lang : 'plaintext';
@@ -21,22 +22,30 @@ function updatePreview() {
   preview.innerHTML = htmlText;
 }
 
-editor.addEventListener('input', updatePreview);
+// Quando o usuário digita, marca o documento como editado
+editor.addEventListener('input', () => {
+  if (!isDocumentEdited) {
+      isDocumentEdited = true;
+      // Envia um sinal para o main.js de que o documento foi alterado
+      ipcRenderer.send('document-edited-status', true);
+  }
+  updatePreview();
+});
 
-// 2. Ouvindo o pedido do processo principal
 ipcRenderer.on('get-content', () => {
-  // 3. Enviando o conteúdo de volta para o processo principal
+  // Ao salvar, consideramos o documento "limpo" novamente
+  isDocumentEdited = false;
+  ipcRenderer.send('document-edited-status', false);
   ipcRenderer.send('send-content', editor.value);
 });
 
+// Ouve o evento de arquivo aberto vindo do main.js
+ipcRenderer.on('file-opened', (event, content) => {
+    editor.value = content; // Coloca o conteúdo no editor
+    updatePreview(); // Atualiza o preview
+    isDocumentEdited = false; // Um arquivo recém-aberto não está "editado"
+    ipcRenderer.send('document-edited-status', false);
+});
 
-// Texto inicial de exemplo
-editor.value = `# App de Desktop!
-
-Agora você pode usar **Cmd/Ctrl + S** para salvar seu trabalho.
-
-- Criado com Electron.js
-- Renderizado com marked.js
-- Realce de sintaxe com highlight.js
-`;
-updatePreview();
+// Texto inicial removido para começar com um documento limpo.
+// Você pode adicionar um ipcRenderer.send para carregar um estado inicial se quiser.

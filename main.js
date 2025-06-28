@@ -1,23 +1,34 @@
-// main.js - VERSÃO COMPLETA
+// main.js - VERSÃO ATUALIZADA
 
 const { app, BrowserWindow, Menu, dialog, ipcMain } = require('electron');
 const path = require('path');
-const fs = require('fs'); // Módulo 'fs' do Node.js para lidar com arquivos
+const fs = require('fs');
 
-let mainWindow; // Torna a variável da janela global para acessá-la mais tarde
+let mainWindow;
+let currentFilePath = null; // Variável para rastrear o arquivo aberto
 
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     webPreferences: {
-      // IMPORTANTE: Necessário para usar 'require' no script.js
       nodeIntegration: true,
       contextIsolation: false,
     }
   });
 
   mainWindow.loadFile('index.html');
+  updateWindowTitle(); // Define o título inicial
+}
+
+// Função para atualizar o título da janela
+function updateWindowTitle() {
+    const baseTitle = 'Markdown Preview App';
+    if (currentFilePath) {
+        mainWindow.setTitle(`${path.basename(currentFilePath)} - ${baseTitle}`);
+    } else {
+        mainWindow.setTitle(`Novo Documento - ${baseTitle}`);
+    }
 }
 
 // --- LÓGICA DO MENU ---
@@ -26,13 +37,32 @@ const menuTemplate = [
     label: 'Arquivo',
     submenu: [
       {
+        label: 'Abrir Arquivo...',
+        accelerator: 'CmdOrCtrl+O',
+        click() {
+          // Lógica para abrir arquivo
+          dialog.showOpenDialog(mainWindow, {
+            properties: ['openFile'],
+            filters: [{ name: 'Markdown Files', extensions: ['md', 'txt'] }]
+          }).then(result => {
+            if (!result.canceled && result.filePaths.length > 0) {
+              const filePath = result.filePaths[0];
+              const content = fs.readFileSync(filePath, 'utf8');
+              currentFilePath = filePath; // Armazena o caminho do arquivo
+              mainWindow.webContents.send('file-opened', content); // Envia o conteúdo para a janela
+              updateWindowTitle();
+            }
+          }).catch(err => console.log(err));
+        }
+      },
+      {
         label: 'Salvar Arquivo...',
         accelerator: 'CmdOrCtrl+S',
         click() {
-          // 1. Pede ao renderer (janela) o conteúdo atual
           mainWindow.webContents.send('get-content');
         }
       },
+      { type: 'separator' },
       {
         label: 'Sair',
         role: 'quit'
@@ -41,29 +71,39 @@ const menuTemplate = [
   }
 ];
 
-// --- LÓGICA DE IPC (COMUNICAÇÃO) ---
+// --- LÓGICA DE IPC ---
 
-// 2. O renderer envia o conteúdo, agora abrimos a caixa de diálogo para salvar
 ipcMain.on('send-content', (event, content) => {
-  dialog.showSaveDialog(mainWindow, {
-    title: 'Salvar arquivo Markdown',
-    filters: [{ name: 'Markdown Files', extensions: ['md'] }]
-  }).then(result => {
-    if (!result.canceled && result.filePath) {
-      fs.writeFileSync(result.filePath, content);
-    }
-  }).catch(err => {
-    console.log(err);
-  });
+  // Lógica de "Salvar" inteligente: se já houver um arquivo, salva diretamente.
+  // Se não, abre o diálogo de "Salvar como...".
+  if (currentFilePath) {
+      fs.writeFileSync(currentFilePath, content);
+  } else {
+      dialog.showSaveDialog(mainWindow, {
+        title: 'Salvar arquivo Markdown',
+        defaultPath: 'untitled.md',
+        filters: [{ name: 'Markdown Files', extensions: ['md'] }]
+      }).then(result => {
+        if (!result.canceled && result.filePath) {
+          fs.writeFileSync(result.filePath, content);
+          currentFilePath = result.filePath;
+          updateWindowTitle();
+        }
+      }).catch(err => console.log(err));
+  }
 });
 
+// ... (Resto do código: app.whenReady, app.on('window-all-closed'), etc.)
 app.whenReady().then(() => {
   createWindow();
   const menu = Menu.buildFromTemplate(menuTemplate);
   Menu.setApplicationMenu(menu);
-  // ... resto do código app.on('activate') ...
+
+  app.on('activate', function () {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
 });
 
-app.on('window-all-closed', () => {
+app.on('window-all-closed', function () {
   if (process.platform !== 'darwin') app.quit();
 });
